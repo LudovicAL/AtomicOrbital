@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Atomic orbital</title>
+	<style>
+		html, body {
+			margin: 0;
+			height: 100%;
+			overflow: hidden;
+			text-align: center;
+		}
+		#theCanvas {
+			width: 70%;
+			height: 70%;
+		}
+	</style>
+</head>
+<body>
+<h1>Atomic Orbital</h1>
+<h2>Click and hold the left mouse button to control the camera.<br>Zoom in and out with the mouse wheel.</h2>
+<canvas id="theCanvas"></canvas>
+<script src="three.js"></script>
+<script src="TrackballControls.js"></script>
+<script src="dat.gui.min.js"></script>
+<script>
+    "use strict;"
+    let scene, camera, renderer;
+    let canvas, controls;
+    let material;
+	const stacks = 64;
+	const slices = 64;
+	const colors = [];
+
+	//Computes the spherical harmonic Y_2^0, return a floating number
+	function sh(x, y, z){
+		return ((1 / 4) * Math.sqrt(5 / Math.PI) * (((2 * Math.pow(z, 2)) - Math.pow(x, 2) - Math.pow(y, 2)) / Math.pow(1, 2)));
+	}
+
+	//Computes the position of a vertex of the parametric geometry, return an object containing 3 floats (x, y, z)
+    function sh_surface(u, v, target){
+		//Polar angle computation
+		let anglePolaire = Math.PI * u;
+		//Azimutal angle computation
+		let angleAzimutal = 2 * Math.PI * v;
+		//Cartesian coordinates computation
+		let x = Math.sin(anglePolaire) * Math.cos(angleAzimutal);
+		let y = Math.sin(anglePolaire) * Math.sin(angleAzimutal);
+		let z = Math.cos(anglePolaire);
+		//Spherical harmonic computation
+		let p = sh(x, y, z);
+		if (p > 0) {
+			colors.push(1.0, 0.0, 0.0);	//Red
+		} else {
+			colors.push(0.0, 0.0, 1.0);	//Blue
+		}
+		//Parametric geometry vertex coordinates computation
+		x = Math.abs(p) * Math.sin(Math.PI * u) * Math.cos(2 * Math.PI * v);
+		y = Math.abs(p) * Math.sin(Math.PI * u) * Math.sin(2 * Math.PI * v);
+		z = Math.abs(p) * Math.cos(Math.PI * u);
+		target.set(x, y, z);
+    }
+
+	//Assigns every vertex its color
+    function set_vertexColor(geometry){
+    	geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+    }
+
+	//Creates a parametric geometry
+	function create_shape(){
+		let paraGeometry = new THREE.ParametricGeometry(sh_surface, slices, stacks);
+		set_vertexColor(paraGeometry);
+		let material = new THREE.MeshLambertMaterial({
+			color: 'white',
+			reflectivity: 	0.5,
+			refractionRatio: 0.5,
+			side: THREE.DoubleSide,
+			vertexColors: true,
+			opacity: 0.9,
+			transparent: true
+		});
+		const paraMesh = new THREE.Mesh(paraGeometry, material );
+		paraMesh.position.set(0, 0, 0);
+		scene.add(paraMesh);
+	}
+
+	//Adds a skybox to the scene
+    function create_world(){
+		let textureURLs = [
+			"posx.png",
+			"negx.png",
+			"posy.png",
+			"negy.png",
+			"posz.png",
+			"negz.png"
+		];
+		const loader = new THREE.CubeTextureLoader();
+		const cubeTexture = loader.load(textureURLs);
+		scene.background = cubeTexture;
+    }
+
+	//Animates the scene
+    function animate() {
+		controls.update();
+		renderer.render(scene, camera);
+		requestAnimationFrame(animate);
+    }
+
+	//Initialization function
+    function init(){
+		//Canvas
+		canvas = document.getElementById("theCanvas");
+
+		//Renderer
+		renderer = new THREE.WebGLRenderer({
+			canvas: canvas,
+			antialias: true
+		});
+
+		//Scene
+		scene = new THREE.Scene();
+		scene.background = new THREE.Color('pink');
+
+		//Camera
+		const fov = 75;
+		const near = 0.1;
+		const far = 1000;
+		camera = new THREE.PerspectiveCamera(fov, canvas.width/canvas.height, near, far);
+		camera.position.set(-1, 1, -1);
+		camera.lookAt(0, 0, 0);
+
+		//Trackball controls
+		controls = new THREE.TrackballControls(camera, renderer.domElement);
+		controls.target.set(0, 0, 0);
+		controls.keys = [ 'KeyA', 'KeyS', 'KeyD' ];
+		controls.rotateSpeed = 2.0;
+
+		//Ambient light
+		const ambientLightColor = 0xFFFFFF;
+		const ambientLightIntensity = 0.2;
+		const ambientLight = new THREE.AmbientLight(ambientLightColor, ambientLightIntensity);
+		scene.add(ambientLight);
+
+		//Punctual light
+		const punctualColor = 0x00FF00;
+		const punctualIntensity = 0.5;
+		const punctualLight = new THREE.PointLight(punctualColor, punctualIntensity, 0, 1);
+		camera.add(punctualLight);
+
+		//World
+		create_world();
+
+		//Shape
+		create_shape();
+
+		//Rendering
+		requestAnimationFrame(animate);
+    }
+
+    init();
+</script>
+</body>
+</html>
