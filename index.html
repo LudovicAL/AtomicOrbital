@@ -30,7 +30,6 @@
     let material;
 	const stacks = 64;
 	const slices = 64;
-	const colors = [];
 
 	//Computes the spherical harmonic Y_2^0, return a floating number
 	function sh(x, y, z){
@@ -38,7 +37,7 @@
 	}
 
 	//Computes the position of a vertex of the parametric geometry, return an object containing 3 floats (x, y, z)
-    function sh_surface(u, v, target){
+	function sh_surface(u, v, target){
 		//Polar angle computation
 		let anglePolaire = Math.PI * u;
 		//Azimutal angle computation
@@ -49,22 +48,27 @@
 		let z = Math.cos(anglePolaire);
 		//Spherical harmonic computation
 		let p = sh(x, y, z);
-		if (p > 0) {
-			colors.push(1.0, 0.0, 0.0);	//Red
-		} else {
-			colors.push(0.0, 0.0, 1.0);	//Blue
-		}
 		//Parametric geometry vertex coordinates computation
 		x = Math.abs(p) * Math.sin(Math.PI * u) * Math.cos(2 * Math.PI * v);
 		y = Math.abs(p) * Math.sin(Math.PI * u) * Math.sin(2 * Math.PI * v);
 		z = Math.abs(p) * Math.cos(Math.PI * u);
 		target.set(x, y, z);
-    }
+	}
 
 	//Assigns every vertex its color
-    function set_vertexColor(geometry){
-    	geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
-    }
+	function set_vertexColor(geometry){
+		let colors = [];
+		let positionLength = geometry.attributes.position.count;
+		for (let i = 0; i < positionLength; i++) {
+			let p = sh(geometry.attributes.position.getX(i), geometry.attributes.position.getY(i), geometry.attributes.position.getZ(i));
+			if (p > 0) {
+				colors.push(1.0, 0.0, 0.0);	//Red
+			} else {
+				colors.push(0.0, 0.0, 1.0);	//Blue
+			}
+		}
+		geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+	}
 
 	//Creates a parametric geometry
 	function create_shape(){
@@ -85,7 +89,7 @@
 	}
 
 	//Adds a skybox to the scene
-    function create_world(){
+	function create_world(){
 		let textureURLs = [
 			"posx.png",
 			"negx.png",
@@ -100,14 +104,14 @@
     }
 
 	//Animates the scene
-    function animate() {
+	function animate() {
 		controls.update();
 		renderer.render(scene, camera);
 		requestAnimationFrame(animate);
     }
 
 	//Initialization function
-    function init(){
+	function init(){
 		//Canvas
 		canvas = document.getElementById("theCanvas");
 
